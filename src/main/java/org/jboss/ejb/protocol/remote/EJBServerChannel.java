@@ -34,12 +34,9 @@ import java.net.Inet6Address;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedAction;
-import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -104,10 +101,6 @@ import org.wildfly.transaction.client.provider.remoting.RemotingTransactionServe
 import org.wildfly.transaction.client.spi.SubordinateTransactionControl;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
-import io.opentracing.propagation.TextMapExtractAdapter;
 import io.opentracing.util.GlobalTracer;
 
 /**
@@ -913,7 +906,6 @@ final class EJBServerChannel {
                         }
                     }
                 }
-                activateSpanFromAttachments(attachments);
                 attachments.put(EJBClient.SOURCE_ADDRESS_KEY, channel.getConnection().getPeerAddress());
                 final ExceptionSupplier<ImportResult<?>, SystemException> finalTransactionSupplier = transactionSupplier;
 
@@ -1059,21 +1051,6 @@ final class EJBServerChannel {
 
                 };
             }
-        }
-        
-        private void activateSpanFromAttachments(Map<String, Object> attachments) {
-            Map<String, String> stringAttachments = new HashMap<>();
-            for (Map.Entry<String, Object> e : attachments.entrySet()) {
-                if(e.getValue() instanceof String) {
-                    stringAttachments.put(e.getKey(), (String) e.getValue());
-                }
-            }
-            // after we've added all attachments, let's search for any relevant opentracing ones
-            Tracer tracer = GlobalTracer.get();
-            SpanContext ctx = tracer.extract(Format.Builtin.TEXT_MAP_EXTRACT, new TextMapExtractAdapter(stringAttachments));
-            Tracer.SpanBuilder span = tracer.buildSpan("EJB-REMOTING");
-            span.asChildOf(ctx);
-            tracer.activateSpan(span.start());
         }
 
         @Override
