@@ -128,6 +128,7 @@ public final class EJBClientContext extends Attachable implements Contextual<EJB
         EJBClientInterceptorInformation.forClass(NamingEJBClientInterceptor.class),
         EJBClientInterceptorInformation.forClass(DiscoveryEJBClientInterceptor.class),
         EJBClientInterceptorInformation.forClass(TransactionPostDiscoveryInterceptor.class),
+        EJBClientInterceptorInformation.forClass(TracingInterceptor.class),
         EJBClientInterceptorInformation.forClass(RemotingEJBClientInterceptor.class)
     });
 
