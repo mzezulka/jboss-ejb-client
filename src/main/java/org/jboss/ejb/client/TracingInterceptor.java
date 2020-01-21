@@ -1,29 +1,26 @@
 package org.jboss.ejb.client;
 
-import java.net.URI;
-import java.util.Collection;
-
 import org.jboss.ejb.client.annotation.ClientInterceptorPriority;
+
+import io.opentracing.Span;
+import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMapInjectAdapter;
+import io.opentracing.util.GlobalTracer;
 
 @ClientInterceptorPriority(TracingInterceptor.PRIORITY)
 public class TracingInterceptor implements EJBClientInterceptor {
 
-    public static final int PRIORITY = ClientInterceptorPriority.JBOSS_AFTER + 10_000; 
+    public static final int PRIORITY = ClientInterceptorPriority.JBOSS_AFTER + 175; 
     
     @Override
     public void handleInvocation(EJBClientInvocationContext context) throws Exception {
-        Collection<URI> attachment = context.getAttachment(TransactionInterceptor.PREFERRED_DESTINATIONS);
-        System.out.println(attachment);
+        Span span = GlobalTracer.get().activeSpan();
+        // EJB client shouldn't be responsible for creating 
+        // any spans (if it is not instrumenting the EJB client itself)
+        if(span != null) {
+            GlobalTracer.get().inject(span.context(), Format.Builtin.TEXT_MAP_INJECT, new TextMapInjectAdapter(context.getContextData()));   
+        }
         context.sendRequest();
-//        SpanContext spanContext = (SpanContext) value;
-//        try {
-//            Object txn = transactionSupplier.get().getTransaction();
-//            System.out.println(txn);
-//            Tracing.activateSpan(new Tracing.DefaultSpanBuilder(SpanName.SUBORD_ROOT)
-//                    .buildSubordinateIfAbsent("???????", spanContext));
-//        } catch (SystemException e) {
-//            e.printStackTrace();
-//        }
     }
 
     @Override

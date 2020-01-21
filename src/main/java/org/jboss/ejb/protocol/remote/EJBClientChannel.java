@@ -43,7 +43,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -115,10 +114,6 @@ import org.wildfly.transaction.client.provider.remoting.SimpleIdResolver;
 import org.xnio.Cancellable;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
-
-import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.util.GlobalTracer;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -206,12 +201,6 @@ class EJBClientChannel {
             case Protocol.PROCEED_ASYNC_RESPONSE: {
                 final int invId = message.readUnsignedShort();
                 leaveOpen = invocationTracker.signalResponse(invId, msg, message, false);
-                if (msg == Protocol.INVOCATION_RESPONSE || msg == Protocol.APPLICATION_EXCEPTION) {
-                    Span span = SPAN_REGISTRY.remove(Integer.toString(invId));
-                    if(span != null) {
-                        span.finish();
-                    }
-                }
                 break;
             }
             case Protocol.COMPRESSED_INVOCATION_MESSAGE: {
@@ -359,20 +348,12 @@ class EJBClientChannel {
     }
 
     private static final AttachmentKey<MethodInvocation> INV_KEY = new AttachmentKey<>();
-    private static final Map<String, Span> SPAN_REGISTRY = new HashMap<>();
     
     public void processInvocation(final EJBReceiverInvocationContext receiverContext,
             final ConnectionPeerIdentity peerIdentity) {
         MethodInvocation invocation = invocationTracker.addInvocation(id -> new MethodInvocation(id, receiverContext));
         final EJBClientInvocationContext invocationContext = receiverContext.getClientInvocationContext();
         invocationContext.putAttachment(INV_KEY, invocation);
-
-        Span span = GlobalTracer.get().activeSpan();
-        // assert we got something, EJB client shouldn't be responsible 
-        // for creating any spans (if it is not instrumenting the EJB client itself)
-        Objects.requireNonNull(span);
-        SPAN_REGISTRY.put(Integer.toString(invocation.getIndex()), span);
-        invocationContext.putAttachment(new AttachmentKey<SpanContext>(), span.context());
         
         final EJBLocator<?> locator = invocationContext.getLocator();
         final int peerIdentityId;

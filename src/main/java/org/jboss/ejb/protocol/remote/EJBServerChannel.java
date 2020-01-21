@@ -103,6 +103,13 @@ import org.wildfly.transaction.client.SimpleXid;
 import org.wildfly.transaction.client.provider.remoting.RemotingTransactionServer;
 import org.wildfly.transaction.client.spi.SubordinateTransactionControl;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMapExtractAdapter;
+import io.opentracing.util.GlobalTracer;
+
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:tadamski@redhat.com">Tomasz Adamski</a>
@@ -790,7 +797,7 @@ final class EJBServerChannel {
             }
         }
     }
-
+    
     final class RemotingInvocationRequest extends RemotingRequest implements InvocationRequest {
         final EJBIdentifier identifier;
         final EJBMethodLocator methodLocator;
@@ -906,6 +913,7 @@ final class EJBServerChannel {
                         }
                     }
                 }
+                activateSpanFromAttachments(attachments);
                 attachments.put(EJBClient.SOURCE_ADDRESS_KEY, channel.getConnection().getPeerAddress());
                 final ExceptionSupplier<ImportResult<?>, SystemException> finalTransactionSupplier = transactionSupplier;
 
@@ -1041,12 +1049,31 @@ final class EJBServerChannel {
                             // nothing to do at this point; the client doesn't want the response
                             Logs.REMOTING.trace("EJB response write failed", e);
                         } finally {
+                            Span s = GlobalTracer.get().activeSpan();
+                            if(s != null) {
+                                s.finish();
+                            }
                             invocations.removeKey(invId);
                         }
                     }
 
                 };
             }
+        }
+        
+        private void activateSpanFromAttachments(Map<String, Object> attachments) {
+            Map<String, String> stringAttachments = new HashMap<>();
+            for (Map.Entry<String, Object> e : attachments.entrySet()) {
+                if(e.getValue() instanceof String) {
+                    stringAttachments.put(e.getKey(), (String) e.getValue());
+                }
+            }
+            // after we've added all attachments, let's search for any relevant opentracing ones
+            Tracer tracer = GlobalTracer.get();
+            SpanContext ctx = tracer.extract(Format.Builtin.TEXT_MAP_EXTRACT, new TextMapExtractAdapter(stringAttachments));
+            Tracer.SpanBuilder span = tracer.buildSpan("EJB-REMOTING");
+            span.asChildOf(ctx);
+            tracer.activateSpan(span.start());
         }
 
         @Override
