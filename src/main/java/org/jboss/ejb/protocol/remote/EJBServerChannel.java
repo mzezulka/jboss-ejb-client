@@ -100,9 +100,6 @@ import org.wildfly.transaction.client.SimpleXid;
 import org.wildfly.transaction.client.provider.remoting.RemotingTransactionServer;
 import org.wildfly.transaction.client.spi.SubordinateTransactionControl;
 
-import io.opentracing.Span;
-import io.opentracing.util.GlobalTracer;
-
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:tadamski@redhat.com">Tomasz Adamski</a>
@@ -1041,10 +1038,6 @@ final class EJBServerChannel {
                             // nothing to do at this point; the client doesn't want the response
                             Logs.REMOTING.trace("EJB response write failed", e);
                         } finally {
-                            Span s = GlobalTracer.get().activeSpan();
-                            if(s != null) {
-                                s.finish();
-                            }
                             invocations.removeKey(invId);
                         }
                     }
