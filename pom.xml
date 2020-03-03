@@ -58,7 +58,7 @@
         <version.org.wildfly.transaction-client>1.1.4.Final</version.org.wildfly.transaction-client>
 
         <version.org.jboss.bridger>1.4.Final</version.org.jboss.bridger>
-        <version.io.opentracing>0.32.0</version.io.opentracing>
+        <version.io.opentracing>0.33.0</version.io.opentracing>
     </properties>
 
     <build>
