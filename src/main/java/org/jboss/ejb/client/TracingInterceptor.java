@@ -38,13 +38,10 @@ public class TracingInterceptor implements EJBClientInterceptor {
      */
     public static class TextMapAdapter implements TextMap {
 
-        private final Map<String, String> map;
+        private final Map<String, ? super String> map;
 
         public TextMapAdapter(Map<String, ? super String> map) {
-            this.map = map.entrySet()
-                    .stream()
-                    .filter(x -> x.getValue() instanceof String)
-                    .collect(Collectors.toMap(Map.Entry::getKey, x -> (String) x.getValue()));
+            this.map = map;
         }
 
         @Override
@@ -54,7 +51,12 @@ public class TracingInterceptor implements EJBClientInterceptor {
 
         @Override
         public Iterator<Map.Entry<String, String>> iterator() {
-            return map.entrySet().iterator();
+            return map.entrySet()
+                    .stream()
+                    .filter(x -> x.getValue() instanceof String)
+                    .collect(Collectors.toMap(Map.Entry::getKey, x -> (String) x.getValue()))
+                    .entrySet()
+                    .iterator();
         }
     }
 }
